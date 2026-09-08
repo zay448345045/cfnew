@@ -33,6 +33,7 @@ fn worker(shard_seed: u64) {
 
         if check(&candidate) {
             println!("!!!FOUND!!! /answer {candidate}");
+            let _ = std::fs::write("found.txt", candidate.as_bytes());
             std::process::exit(0);
         }
 
