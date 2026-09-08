@@ -58,7 +58,41 @@ jobs:
               echo "❌ Double check FAIL, rust produced bad candidate!"
               exit 1
           fi
-
+      - name: Verify answer
+        shell: bash
+        run: |
+          set -e
+          if [ ! -f found.txt ]; then
+            echo "No found.txt, not hit yet"
+            exit 0
+          fi
+          u=$(cat found.txt)
+          echo "Candidate UUID: $u"
+          len=${#u}
+          echo "Length: $len"
+          if [ "$len" -ne 36 ]; then
+            echo "ERROR: length not 36, invalid uuid"
+            exit 1
+          fi
+          hash=$(echo -n "$u" | sha512sum | awk '{print $1}')
+          echo "SHA512: $hash"
+          # 判断前8位是否 00000000
+          prefix=${hash:0:8}
+          if [ "$prefix" != "00000000" ]; then
+            echo "ERROR: hash not start with 00000000, false hit"
+            exit 1
+          fi
+          # 第5字节：取hash第9‑10字符，转十六进制，判断最高bit不为1
+          byte5_hex=${hash:8:2}
+          echo "byte5 hex: $byte5_hex"
+          # shell转十进制
+          byte5=$((16#$byte5_hex))
+          if (( (byte5 & 0x80) != 0 )); then
+            echo "ERROR: 33rd bit is 1, reject"
+            exit 1
+          fi
+          echo "✅ ALL CHECK PASS! Valid answer: /answer $u"
+          echo "ANSWER=$u" >> $GITHUB_ENV
       - name: Publish Release (softprops/action-gh-release@v3)
         if: steps.brute_task.outputs.FOUND_UUID != '' && steps.verify.outputs.VALID == 'true'
         uses: softprops/action-gh-release@v3
