@@ -1,0 +1,8 @@
+[package]
+name = "alps_brute"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ring = "0.17"
+rand = "0.8"
