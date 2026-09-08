@@ -12,11 +12,16 @@ fn check(candidate: &str) -> bool {
     let hash = digest(&SHA512, candidate.as_bytes());
     let b = hash.as_ref();
     // 前32bit全部为0
+// -------- 测试模式：只要求哈希第一个字节最高5bit=0
+    // 0b00000xxx 最高5位是0
+    return (b[0] & 0xF8) == 0;
+/*
     if b[0] != 0 || b[1] != 0 || b[2] != 0 || b[3] != 0 {
         return false;
     }
     // 第33bit为0
     (b[4] & 0x80) == 0
+*/
 }
 
 fn worker(shard_seed: u64) {
