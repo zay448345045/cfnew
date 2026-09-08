@@ -4,24 +4,15 @@ use std::env;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 
-const PREFIX: &str = "2c04f018-";
-const SUFFIX: &str = "cf75fef9";
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn check(candidate: &str) -> bool {
     let hash = digest(&SHA512, candidate.as_bytes());
     let b = hash.as_ref();
-    // 前32bit全部为0
-// -------- 测试模式：只要求哈希第一个字节最高5bit=0
-    // 0b00000xxx 最高5位是0
-  //  return (b[0] & 0xF8) == 0;
-
     if b[0] != 0 || b[1] != 0 || b[2] != 0 || b[3] != 0 {
         return false;
     }
-    // 第33bit为0
     (b[4] & 0x80) == 0
-
 }
 
 fn worker(shard_seed: u64) {
@@ -29,17 +20,16 @@ fn worker(shard_seed: u64) {
     loop {
         let p1: u16 = rng.gen();
         let p2: u16 = rng.gen();
-        let p3: u16 = rng.gen(); // 必须定义p3
+        let p3: u16 = rng.gen();
+        let p4: u16 = rng.gen();
+
         let seg1 = "2c04f018";
         let seg2 = format!("{p1:04x}");
         let seg3 = format!("{p2:04x}");
         let seg4 = format!("{p3:04x}");
-        let seg5 = "cf75fef9";
+        let seg5 = format!("{p4:04x}2b049b96");
 
         let candidate = format!("{seg1}-{seg2}-{seg3}-{seg4}-{seg5}");
-//        let p3: u16 = rng.gen_range(0..0x1000);
-//        let mid = format!("{p1:04x}-{p2:04x}-{p3:03x}");
-//        let candidate = format!("{PREFIX}{mid}{SUFFIX}");
 
         if check(&candidate) {
             println!("!!!FOUND!!! /answer {candidate}");
@@ -59,7 +49,10 @@ fn main() {
         .parse()
         .unwrap_or(0);
 
-    let num_threads = num_cpus::get();
+    let num_threads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(2);
+
     println!("shard_id={shard_id}, spawn {num_threads} worker threads");
 
     let mut handles = Vec::new();
