@@ -10,8 +10,8 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
- #     matrix:
-#        shard_id: [0, 1, 2, 3]
+      matrix:
+        shard_id: [0, 1, 2, 3]
 
     steps:
       - name: Checkout source
