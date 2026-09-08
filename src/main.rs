@@ -29,9 +29,16 @@ fn worker(shard_seed: u64) {
     loop {
         let p1: u16 = rng.gen();
         let p2: u16 = rng.gen();
-        let p3: u16 = rng.gen_range(0..0x1000);
-        let mid = format!("{p1:04x}-{p2:04x}-{p3:03x}");
-        let candidate = format!("{PREFIX}{mid}{SUFFIX}");
+        let seg1 = "2c04f018";
+        let seg2 = format!("{p1:04x}");
+        let seg3 = format!("{p2:04x}");
+        let seg4 = format!("{p3:04x}");
+        let seg5 = "cf75fef9";
+
+        let candidate = format!("{seg1}-{seg2}-{seg3}-{seg4}-{seg5}");
+//        let p3: u16 = rng.gen_range(0..0x1000);
+//        let mid = format!("{p1:04x}-{p2:04x}-{p3:03x}");
+//        let candidate = format!("{PREFIX}{mid}{SUFFIX}");
 
         if check(&candidate) {
             println!("!!!FOUND!!! /answer {candidate}");
