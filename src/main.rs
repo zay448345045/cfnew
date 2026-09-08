@@ -29,6 +29,7 @@ fn worker(shard_seed: u64) {
     loop {
         let p1: u16 = rng.gen();
         let p2: u16 = rng.gen();
+        let p3: u16 = rng.gen(); // 必须定义p3
         let seg1 = "2c04f018";
         let seg2 = format!("{p1:04x}");
         let seg3 = format!("{p2:04x}");
