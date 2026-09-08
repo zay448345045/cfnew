@@ -5,13 +5,13 @@ on:
 jobs:
   brute‑worker:
     runs‑on: ubuntu‑latest
-    timeout‑minutes: 240
+#    timeout‑minutes: 240
     permissions:
       contents: write
     strategy:
       fail‑fast: false
-      matrix:
-        shard_id: [0, 1, 2, 3] # 4分片，免费额度友好，按需增减，不要超过4
+#      matrix:
+#        shard_id: [0, 1, 2, 3] # 4分片，免费额度友好，按需增减，不要超过4
 
     steps:
       - name: Checkout source
@@ -33,6 +33,42 @@ jobs:
           RESULT=$(grep "!!!FOUND!!!" run.log | sed -E 's/.*\/answer //')
           echo "FOUND_UUID=$RESULT" >> $GITHUB_OUTPUT
 
+
+      
+      - name: Shell double‑check sha512 condition
+        id: verify
+        if: steps.brute_task.outputs.FOUND_UUID != ''
+        run: |
+          UUID="${{ steps.brute_task.outputs.FOUND_UUID }}"
+          echo "Candidate UUID: $UUID"
+          HASH_HEX=$(echo -n "$UUID" | sha512sum | awk '{print $1}')
+          echo "SHA512 hex: $HASH_HEX"
+
+          b0=$((16#${HASH_HEX:0:2}))
+          b1=$((16#${HASH_HEX:2:2}))
+          b2=$((16#${HASH_HEX:4:2}))
+          b3=$((16#${HASH_HEX:6:2}))
+          b4=$((16#${HASH_HEX:8:2}))
+
+          echo "b0=$b0 b1=$b1 b2=$b2 b3=$b3 b4=$b4"
+
+          # 判断条件：前4字节全0，b4最高bit=0
+          if [ $b0 -eq 0 ] && [ $b1 -eq 0 ] && [ $b2 -eq 0 ] && [ $b3 -eq 0 ] && (( (b4 & 0x80) == 0 ));then
+              echo "VALID=true" >> $GITHUB_OUTPUT
+              echo "✅ Double check PASS, meets problem requirement"
+          else
+              echo "VALID=false" >> $GITHUB_OUTPUT
+              echo "❌ Double check FAIL, rust produced bad candidate!"
+              exit 1
+          fi
+
+      - name: Publish Release (softprops/action‑gh‑release@v3)
+        if: steps.brute_task.outputs.FOUND_UUID != '' && steps.verify.outputs.VALID == 'true'
+        uses: softprops/action‑gh‑release@v3
+        with:
+          tag_name: "alps‑found‑${{ steps.brute_task.outputs.FOUND_UUID }}"
+          name: "✅ ALPS target UUID found"
+          body: |
       - name: Publish Release (softprops/action‑gh‑release@v3)
         if: steps.brute_task.outputs.FOUND_UUID != ''
         uses: softprops/action‑gh‑release@v3
