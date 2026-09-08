@@ -1,0 +1,48 @@
+name: Final‑Matrix‑Brute‑ALPS
+on:
+  workflow_dispatch:
+
+jobs:
+  brute‑worker:
+    runs‑on: ubuntu‑latest
+    timeout‑minutes: 240
+    permissions:
+      contents: write
+    strategy:
+      fail‑fast: false
+      matrix:
+        shard_id: [0, 1, 2, 3] # 4分片，免费额度友好，按需增减，不要超过4
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust‑toolchain@stable
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Run brute‑force shard ${{ matrix.shard_id }}
+        id: brute_task
+        env:
+          MATRIX_SHARD_ID: ${{ matrix.shard_id }}
+        run: |
+          ./target/release/alps_brute > run.log 2>&1
+          cat run.log
+          RESULT=$(grep "!!!FOUND!!!" run.log | sed -E 's/.*\/answer //')
+          echo "FOUND_UUID=$RESULT" >> $GITHUB_OUTPUT
+
+      - name: Publish Release (softprops/action‑gh‑release@v3)
+        if: steps.brute_task.outputs.FOUND_UUID != ''
+        uses: softprops/action‑gh‑release@v3
+        with:
+          tag_name: "alps‑found‑${{ steps.brute_task.outputs.FOUND_UUID }}"
+          name: "✅ ALPS target UUID found"
+          body: |
+/answer ${{ steps.brute_task.outputs.FOUND_UUID }}
+draft: false
+prerelease: false
+fail_on_tag_exists: false
+env:
+GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
