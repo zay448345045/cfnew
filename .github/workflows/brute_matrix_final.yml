@@ -1,29 +1,29 @@
-name: Final‑Matrix‑Brute‑ALPS
+name: Final-Matrix-Brute-ALPS
 on:
   workflow_dispatch:
 
 jobs:
-  brute‑worker:
-    runs‑on: ubuntu‑latest
-#    timeout‑minutes: 240
+  brute-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
     permissions:
       contents: write
     strategy:
-      fail‑fast: false
-#      matrix:
-#        shard_id: [0, 1, 2, 3] # 4分片，免费额度友好，按需增减，不要超过4
+      fail-fast: false
+ #     matrix:
+#        shard_id: [0, 1, 2, 3]
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v7
 
       - name: Install Rust stable
-        uses: dtolnay/rust‑toolchain@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Build release binary
         run: cargo build --release
 
-      - name: Run brute‑force shard ${{ matrix.shard_id }}
+      - name: Run brute-force shard ${{ matrix.shard_id }}
         id: brute_task
         env:
           MATRIX_SHARD_ID: ${{ matrix.shard_id }}
@@ -33,9 +33,7 @@ jobs:
           RESULT=$(grep "!!!FOUND!!!" run.log | sed -E 's/.*\/answer //')
           echo "FOUND_UUID=$RESULT" >> $GITHUB_OUTPUT
 
-
-      
-      - name: Shell double‑check sha512 condition
+      - name: Shell double-check sha512 condition
         id: verify
         if: steps.brute_task.outputs.FOUND_UUID != ''
         run: |
@@ -52,7 +50,6 @@ jobs:
 
           echo "b0=$b0 b1=$b1 b2=$b2 b3=$b3 b4=$b4"
 
-          # 判断条件：前4字节全0，b4最高bit=0
           if [ $b0 -eq 0 ] && [ $b1 -eq 0 ] && [ $b2 -eq 0 ] && [ $b3 -eq 0 ] && (( (b4 & 0x80) == 0 ));then
               echo "VALID=true" >> $GITHUB_OUTPUT
               echo "✅ Double check PASS, meets problem requirement"
@@ -62,23 +59,13 @@ jobs:
               exit 1
           fi
 
-      - name: Publish Release (softprops/action‑gh‑release@v3)
+      - name: Publish Release (softprops/action-gh-release@v3)
         if: steps.brute_task.outputs.FOUND_UUID != '' && steps.verify.outputs.VALID == 'true'
-        uses: softprops/action‑gh‑release@v3
+        uses: softprops/action-gh-release@v3
         with:
-          tag_name: "alps‑found‑${{ steps.brute_task.outputs.FOUND_UUID }}"
-          name: "✅ ALPS target UUID found"
-          body: |
-      - name: Publish Release (softprops/action‑gh‑release@v3)
-        if: steps.brute_task.outputs.FOUND_UUID != ''
-        uses: softprops/action‑gh‑release@v3
-        with:
-          tag_name: "alps‑found‑${{ steps.brute_task.outputs.FOUND_UUID }}"
+          tag_name: "alps-found-${{ steps.brute_task.outputs.FOUND_UUID }}"
           name: "✅ ALPS target UUID found"
           body: |
            /answer ${{ steps.brute_task.outputs.FOUND_UUID }}
-draft: false
-prerelease: false
-fail_on_tag_exists: false
-env:
-GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+           env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
